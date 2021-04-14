@@ -20,9 +20,6 @@ def transport(src, dst):
         dname = dst.getsockname()[0]
         while recp:
             print(f"[{sname} to {dname}]> " + recp.hex())
-            if recp is '地址和端口':
-                # '替换掉'
-                recp = 'my addr'
             dst.send(recp)
             recp = src.recv(1024)
     except:
@@ -57,7 +54,7 @@ if __name__ == '__main__':
     lip1, lport1 = socket1.getsockname()
 
     socket2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
-    socket2.bind(('127.0.0.1', 0))
+    socket2.bind(('127.0.0.1', game_addr[1]))
     socket2.listen()
     lip2, lport2 = socket2.getsockname()
 
