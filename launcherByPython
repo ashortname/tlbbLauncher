@@ -1,0 +1,77 @@
+#!bin/bash/python3
+# -*- coding=utf-8 -*-
+import socket
+import threading
+import subprocess
+
+
+def sock_close(conn):
+    try:
+        conn.close()
+    except:
+        pass
+
+
+# 转发
+def transport(src, dst):
+    try:
+        recp = src.recv(1024)
+        sname = src.getsockname()[0]
+        dname = dst.getsockname()[0]
+        while recp:
+            print(f"[{sname} to {dname}]> " + recp.hex())
+            if recp is '地址和端口':
+                # '替换掉'
+                recp = 'my addr'
+            dst.send(recp)
+            recp = src.recv(1024)
+    except:
+        pass
+    print(f'[{sname} to {dname}] End...')
+    sock_close(src)
+    sock_close(dst)
+
+
+# 侦听
+def accept_serv(remote_addr, sock_server):
+    while True:
+        conn, addr = sock_server.accept()
+        print(f"Accept connection from {addr[0]}:{addr[1]}")
+        tSock = socket.socket()
+        tSock.connect(remote_addr)
+        threading.Thread(target=transport, args=(conn, tSock)).start()
+        threading.Thread(target=transport, args=(tSock, conn)).start()
+
+
+if __name__ == '__main__':
+    # tlbb/server/config/serverinfo.ini [server1] port0
+    login_addr = ('ip of your game server', 0)
+    # tlbb/server/config/serverinfo.ini [server0] port0
+    game_addr = ('ip of your game server', 0)
+    game_path = r'游戏根目录'
+
+    # 设置两个监听
+    socket1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
+    socket1.bind(('127.0.0.1', 0))
+    socket1.listen()
+    lip1, lport1 = socket1.getsockname()
+
+    socket2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
+    socket2.bind(('127.0.0.1', 0))
+    socket2.listen()
+    lip2, lport2 = socket2.getsockname()
+
+    # 启动程序
+    with open(game_path + r"\Patch\LoginServer.txt", 'w') as file:
+        text = "VERSION 1\n\nSERVER_BEGIN\n" + \
+               "我的天龙,我的天龙,1,201,3,1,0,天龙八部," + f"{lip1}:{lport1},"*4 + "2\nSERVER_END\n"
+        file.write(text)
+    subprocess.Popen(game_path + r"\Bin\Game.exe -fl C0A80108 3039 12D82B")
+    # 开始侦听
+    t_login = threading.Thread(target=accept_serv, args=(login_addr, socket1))
+    t_game = threading.Thread(target=accept_serv, args=(game_addr, socket2))
+    t_login.start()
+    t_game.start()
+    t_login.join()
+    t_game.join()
+    print("End of Program")
